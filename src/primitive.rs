@@ -5,6 +5,7 @@ use chumsky::error::Error;
 use proc_macro2::{Punct, Spacing};
 
 use crate::{RustToken, RustSpan};
+use crate::utils::punct_eq;
 
 /// Generate a parser for a series of joined punct tokens, with the ending allowing any spacing.
 /// Given `"+="`, this will match `+=` and `+=+`, but not `+ =`.
@@ -47,27 +48,23 @@ pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(punct: &str) -> impl P
         .try_map::<Vec<Punct>, _>(move |toks: Vec<RustToken>, span: RustSpan| {
             toks.into_iter().enumerate()
                 .map(|(idx, tok)| {
-                    if let RustToken::Punct(punct) = tok {
-                        if punct.as_char() == puncts[idx].as_char() && punct.spacing() == puncts[idx].spacing() {
+                    tok.into_punct()
+                        .and_then(|punct| if punct_eq(&punct, &puncts[idx]) {
                             Ok(punct)
                         } else {
-                            Err(E::expected_input_found(span.clone(), [], Some(RustToken::Punct(punct))))
-                        }
-                    } else {
-                        Err(E::expected_input_found(span.clone(), [], Some(tok)))
-                    }
+                            Err(RustToken::Punct(punct))
+                        })
+                        .map_err(|tok| E::expected_input_found(span.clone(), [], Some(tok)))
                 })
                 .collect::<Result<_, _>>()
         })
-        .chain(filter_map(move |span, tok| {
-            if let RustToken::Punct(punct) = tok {
-                if punct.as_char() == last.as_char() {
+        .chain(filter_map(move |span, tok: RustToken| {
+            tok.into_punct()
+                .and_then(|punct| if punct.as_char() == last.as_char() {
                     Ok(punct)
                 } else {
-                    Err(E::expected_input_found(span, [], Some(RustToken::Punct(punct))))
-                }
-            } else {
-                Err(E::expected_input_found(span, [], Some(tok)))
-            }
+                    Err(RustToken::Punct(punct))
+                })
+                .map_err(|tok| E::expected_input_found(span, [], Some(tok)))
         }))
 }

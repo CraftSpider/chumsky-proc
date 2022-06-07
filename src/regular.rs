@@ -3,7 +3,8 @@ use std::ops::Range;
 use proc_macro2::{Span, TokenStream};
 use chumsky::Stream;
 
-use super::{into_vec, RustSpan, RustToken};
+use super::{RustSpan, RustToken};
+use crate::utils::into_vec;
 
 impl chumsky::Span for RustSpan {
     type Context = ();

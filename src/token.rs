@@ -2,6 +2,37 @@ use std::hash::{Hash, Hasher};
 use proc_macro2::{Literal, Ident, Punct, Delimiter, Spacing};
 
 use crate::RustSpan;
+use crate::utils::punct_eq;
+
+macro_rules! impl_items {
+    ($variant:ident, $inner:ty, $name:literal, $is_name:ident, $as_name:ident, $into_name:ident) => {
+        #[inline]
+        #[doc = concat!("Returns whether this token is ", $name)]
+        pub fn $is_name(&self) -> bool {
+            matches!(self, RustToken::$variant(_))
+        }
+
+        #[inline]
+        #[doc = concat!("Get this token as ", $name, ", or return `None`")]
+        pub fn $as_name(&self) -> Option<&$inner> {
+            if let Self::$variant(inner) = self {
+                Some(inner)
+            } else {
+                None
+            }
+        }
+
+        #[inline]
+        #[doc = concat!("Convert this token into ", $name, ", or return `Err(self)`")]
+        pub fn $into_name(self) -> Result<$inner, Self> {
+            if let Self::$variant(inner) = self {
+                Ok(inner)
+            } else {
+                Err(self)
+            }
+        }
+    }
+}
 
 /// A Rust Token - The flattened form of a [`TokenTree`][proc_macro2::TokenTree] with groups
 /// converted into start and end delimiters.
@@ -25,61 +56,43 @@ impl RustToken {
     /// A utility for passing to `filter_map` which converts tokens to a `Literal` or returns an
     /// error
     pub fn filter_literal<E: chumsky::Error<RustToken, Span = RustSpan>>(span: RustSpan, this: Self) -> Result<Literal, E> {
-        if let RustToken::Literal(lit) = this {
-            Ok(lit)
-        } else {
-            Err(E::expected_input_found(span, [], Some(this)))
-        }
+        this.into_literal()
+            .map_err(|this| E::expected_input_found(span, [], Some(this)))
     }
 
     /// A utility for passing to `filter_map` which converts tokens to an `Ident` or returns an
     /// error
     pub fn filter_ident<E: chumsky::Error<RustToken, Span = RustSpan>>(span: RustSpan, this: Self) -> Result<Ident, E> {
-        if let RustToken::Ident(ident) = this {
-            Ok(ident)
-        } else {
-            Err(E::expected_input_found(span, [], Some(this)))
-        }
+        this.into_ident()
+            .map_err(|this| E::expected_input_found(span, [], Some(this)))
     }
 
     /// A utility for passing to `filter_map` which converts tokens to a `Punct` or returns an
     /// error
     pub fn filter_punct<E: chumsky::Error<RustToken, Span = RustSpan>>(span: RustSpan, this: Self) -> Result<Punct, E> {
-        if let RustToken::Punct(punct) = this {
-            Ok(punct)
-        } else {
-            Err(E::expected_input_found(span, [], Some(this)))
-        }
+        this.into_punct()
+            .map_err(|this| E::expected_input_found(span, [], Some(this)))
     }
 
-    /// Returns whether this token is a Literal
-    pub fn is_literal(&self) -> bool {
-        matches!(self, RustToken::Literal(_))
-    }
-
-    /// Returns whether this token is an identifier
-    pub fn is_ident(&self) -> bool {
-        matches!(self, RustToken::Ident(_))
-    }
-
-    /// Returns whether this token is punctuation
-    pub fn is_punct(&self) -> bool {
-        matches!(self, RustToken::Punct(_))
-    }
+    impl_items!(Literal, Literal, "a literal", is_literal, as_literal, into_literal);
+    impl_items!(Ident, Ident, "an identifier", is_ident, as_ident, into_ident);
+    impl_items!(Punct, Punct, "punctuation", is_punct, as_punct, into_punct);
+    impl_items!(StartDelim, Delimiter, "a starting delimiter", is_start_delim, as_start_delim, into_start_delim);
+    impl_items!(EndDelim, Delimiter, "an ending delimiter", is_end_delim, as_end_delim, into_end_delim);
 
     /// Returns whether this token is a delimiter - start or end
     pub fn is_delim(&self) -> bool {
         self.is_start_delim() || self.is_end_delim()
     }
 
-    /// Returns whether this token is a starting delimiter
-    pub fn is_start_delim(&self) -> bool {
-        matches!(self, RustToken::StartDelim(_))
+    /// Get this token as a delimiter, start or end, or return `None`
+    pub fn as_delim(&self) -> Option<&Delimiter> {
+        self.as_start_delim().or_else(|| self.as_end_delim())
     }
 
-    /// Returns whether this token is an ending delimiter
-    pub fn is_end_delim(&self) -> bool {
-        matches!(self, RustToken::EndDelim(_))
+    /// Convert this token into a delimiter, start or end, or return `Err(self)`
+    pub fn into_delim(self) -> Result<Delimiter, RustToken> {
+        self.into_start_delim().or_else(|this| this.into_end_delim())
     }
 }
 
@@ -94,8 +107,7 @@ impl PartialEq for RustToken {
                 this == other
             }
             (RustToken::Punct(this), RustToken::Punct(other)) => {
-                // to_string would lose spacing info
-                this.as_char() == other.as_char() && this.spacing() == other.spacing()
+                punct_eq(this, other)
             }
             (RustToken::StartDelim(this), RustToken::StartDelim(other)) => {
                 this == other
@@ -110,31 +122,25 @@ impl PartialEq for RustToken {
 
 impl PartialEq<Literal> for RustToken {
     fn eq(&self, other: &Literal) -> bool {
-        if let RustToken::Literal(lit) = self {
-            lit.to_string() == other.to_string()
-        } else {
-            false
-        }
+        self.as_literal()
+            .map(|lit| lit.to_string() == other.to_string())
+            .unwrap_or(false)
     }
 }
 
 impl PartialEq<Ident> for RustToken {
     fn eq(&self, other: &Ident) -> bool {
-        if let RustToken::Ident(ident) = self {
-            ident == other
-        } else {
-            false
-        }
+        self.as_ident()
+            .map(|ident| ident == other)
+            .unwrap_or(false)
     }
 }
 
 impl PartialEq<Punct> for RustToken {
     fn eq(&self, other: &Punct) -> bool {
-        if let RustToken::Punct(punct) = self {
-            punct.as_char() == other.as_char() && punct.spacing() == other.spacing()
-        } else {
-            false
-        }
+        self.as_punct()
+            .map(|punct| punct_eq(punct, other))
+            .unwrap_or(false)
     }
 }
 
