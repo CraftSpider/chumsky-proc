@@ -2,18 +2,19 @@
 use proc_macro::TokenStream;
 use chumsky_proc::{RustToken, RustSpan, stream_from_tokens};
 use chumsky::prelude::*;
+use proc_macro2::{Ident, Punct};
 
 #[derive(Debug)]
 struct SimpleExpr {
-    left: RustToken,
-    middle: RustToken,
-    right: RustToken,
+    left: Ident,
+    middle: Punct,
+    right: Ident,
 }
 
 fn parser() -> impl Parser<RustToken, SimpleExpr, Error = Simple<RustToken, RustSpan>> {
-    filter(RustToken::is_ident)
-        .then(filter(RustToken::is_punct))
-        .then(filter(RustToken::is_ident))
+    filter_map(RustToken::filter_ident)
+        .then(filter_map(RustToken::filter_punct))
+        .then(filter_map(RustToken::filter_ident))
         .map(|((left, middle), right)| SimpleExpr { left, middle, right })
 }
 

@@ -10,14 +10,10 @@ impl chumsky::Span for RustSpan {
     type Offset = RustSpan;
 
     fn new(_: Self::Context, range: Range<Self::Offset>) -> Self {
-        range.start.0.join(range.end.0)
-            .unwrap()
-            .into()
+        range.start.join(range.end).unwrap_or_else(|| Span::mixed_site().into())
     }
 
-    fn context(&self) -> Self::Context {
-        ()
-    }
+    fn context(&self) -> Self::Context {}
 
     fn start(&self) -> Self::Offset {
         self.clone()
@@ -28,11 +24,12 @@ impl chumsky::Span for RustSpan {
     }
 }
 
+/// Generate a chumsky `Stream` from a Rust `TokenStream`
 pub fn stream_from_tokens(stream: TokenStream) -> Stream<'static, RustToken, RustSpan, impl Iterator<Item = (RustToken, RustSpan)>> {
     let tokens = into_vec(stream);
 
     Stream::from_iter(
-        Span::call_site().into(),
+        Span::mixed_site().into(),
         tokens.into_iter(),
     )
 }

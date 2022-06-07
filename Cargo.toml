@@ -5,21 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-zero_copy = ["chumsky_zero_copy/nightly"]
-
 [dependencies]
 chumsky = "0.8"
 proc-macro2 = "1.0"
 
-[dependencies.chumsky_zero_copy]
-name = "chumsky"
-optional = true
-version = "0.8"
-package = "chumsky"
-git = "https://github.com/zesterer/chumsky"
-branch = "zero-copy"
-
 [[example]]
 name = "proc-example"
-crate-type = ["proc-macro"]
+proc-macro = true
