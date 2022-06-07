@@ -11,4 +11,5 @@ proc-macro2 = "1.0"
 
 [[example]]
 name = "proc-example"
+crate-type = ["proc-macro"]
 proc-macro = true

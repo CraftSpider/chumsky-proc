@@ -1,5 +1,5 @@
 use std::hash::{Hash, Hasher};
-use proc_macro2::{Literal, Ident, Punct, Delimiter};
+use proc_macro2::{Literal, Ident, Punct, Delimiter, Spacing};
 
 use crate::RustSpan;
 
@@ -85,16 +85,17 @@ impl RustToken {
 
 impl PartialEq for RustToken {
     fn eq(&self, other: &Self) -> bool {
-        // TODO: Improve eq for literal and punct
         match (self, other) {
             (RustToken::Literal(this), RustToken::Literal(other)) => {
+                // This seems sufficient - literals preserve their text into to_string well
                 this.to_string() == other.to_string()
             }
             (RustToken::Ident(this), RustToken::Ident(other)) => {
                 this == other
             }
             (RustToken::Punct(this), RustToken::Punct(other)) => {
-                this.to_string() == other.to_string()
+                // to_string would lose spacing info
+                this.as_char() == other.as_char() && this.spacing() == other.spacing()
             }
             (RustToken::StartDelim(this), RustToken::StartDelim(other)) => {
                 this == other
@@ -122,7 +123,11 @@ impl Hash for RustToken {
             }
             RustToken::Punct(punct) => {
                 state.write_u8(2);
-                punct.to_string().hash(state);
+                punct.as_char().hash(state);
+                match punct.spacing() {
+                    Spacing::Alone => state.write_u8(0),
+                    Spacing::Joint => state.write_u8(1),
+                }
             }
             RustToken::StartDelim(delim) => {
                 state.write_u8(3);
