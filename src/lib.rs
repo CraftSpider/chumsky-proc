@@ -14,6 +14,7 @@
     semicolon_in_expressions_from_macros,
     unused_import_braces,
     unused_lifetimes,
+    clippy::missing_docs_in_private_items,
     clippy::missing_panics_doc,
     clippy::doc_markdown,
     clippy::ptr_as_ptr,
@@ -23,7 +24,7 @@
     clippy::match_same_arms,
     clippy::redundant_closure,
     clippy::redundant_closure_call,
-    clippy::redundant_closure_for_method_calls,
+    clippy::redundant_closure_for_method_calls
 )]
 
 pub mod primitive;
@@ -39,6 +40,6 @@ pub use token::RustToken;
 
 /// Common imports, meant to be used as `use chumsky_proc::prelude::*;`
 pub mod prelude {
-    pub use crate::{RustToken, RustSpan, stream_from_tokens};
     pub use crate::primitive::*;
+    pub use crate::{stream_from_tokens, RustSpan, RustToken};
 }

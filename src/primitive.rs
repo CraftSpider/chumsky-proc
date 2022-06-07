@@ -121,7 +121,10 @@ pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(
 ) -> impl Parser<RustToken, Vec<Punct>, Error = E> + Clone {
     use chumsky::prelude::*;
 
-    assert!(!punct.is_empty(), "Invalid empty punctuation for Rust proc-macro");
+    assert!(
+        !punct.is_empty(),
+        "Invalid empty punctuation for Rust proc-macro"
+    );
 
     let mut puncts = punct
         .chars()

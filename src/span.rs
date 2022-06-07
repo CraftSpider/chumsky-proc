@@ -1,3 +1,5 @@
+//! Implementation of a wrapper for a Rust `Span` to avoid foreign impl issues
+
 use proc_macro2::Span;
 use std::borrow::Borrow;
 use std::ops::Deref;
@@ -7,6 +9,7 @@ use std::ops::Deref;
 pub struct RustSpan(Span);
 
 impl RustSpan {
+    /// Join this span to another - always returns `None` when not on nightly
     pub(crate) fn join(self, other: RustSpan) -> Option<RustSpan> {
         self.0.join(other.0).map(RustSpan::from)
     }

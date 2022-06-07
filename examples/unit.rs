@@ -1,10 +1,9 @@
-
-use std::str::FromStr;
-use proc_macro::TokenStream;
-use proc_macro2::{Literal, Delimiter};
-use quote::{quote, ToTokens};
-use chumsky_proc::prelude::*;
 use chumsky::prelude::*;
+use chumsky_proc::prelude::*;
+use proc_macro::TokenStream;
+use proc_macro2::{Delimiter, Literal};
+use quote::{quote, ToTokens};
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum UnitName {
@@ -19,7 +18,8 @@ enum UnitName {
 
 impl UnitName {
     fn parser() -> impl Parser<RustToken, UnitName, Error = Simple<RustToken, RustSpan>> + Clone {
-        keyword("s").to(UnitName::S)
+        keyword("s")
+            .to(UnitName::S)
             .or(keyword("m").to(UnitName::M))
             .or(keyword("kg").to(UnitName::Kg))
             .or(keyword("A").to(UnitName::A))
@@ -30,13 +30,34 @@ impl UnitName {
 
     fn eval(&self) -> UnitResult {
         match self {
-            UnitName::S => UnitResult { seconds: 1, ..UnitResult::default() },
-            UnitName::M => UnitResult { meters: 1, ..UnitResult::default() },
-            UnitName::Kg => UnitResult { kilograms: 1, ..UnitResult::default() },
-            UnitName::A => UnitResult { amperes: 1, ..UnitResult::default() },
-            UnitName::K => UnitResult { kelvin: 1, ..UnitResult::default() },
-            UnitName::Mol => UnitResult { mols: 1, ..UnitResult::default() },
-            UnitName::Cd => UnitResult { candela: 1, ..UnitResult::default() },
+            UnitName::S => UnitResult {
+                seconds: 1,
+                ..UnitResult::default()
+            },
+            UnitName::M => UnitResult {
+                meters: 1,
+                ..UnitResult::default()
+            },
+            UnitName::Kg => UnitResult {
+                kilograms: 1,
+                ..UnitResult::default()
+            },
+            UnitName::A => UnitResult {
+                amperes: 1,
+                ..UnitResult::default()
+            },
+            UnitName::K => UnitResult {
+                kelvin: 1,
+                ..UnitResult::default()
+            },
+            UnitName::Mol => UnitResult {
+                mols: 1,
+                ..UnitResult::default()
+            },
+            UnitName::Cd => UnitResult {
+                candela: 1,
+                ..UnitResult::default()
+            },
         }
     }
 }
@@ -53,42 +74,55 @@ enum UnitExpr {
 impl UnitExpr {
     fn parser() -> impl Parser<RustToken, UnitExpr, Error = Simple<RustToken, RustSpan>> {
         recursive(|expr| {
-            let atom = UnitName::parser()
-                .map(UnitExpr::Unit)
-                .or(
-                    expr
-                        .delimited_by(just(RustToken::StartDelim(Delimiter::Parenthesis)), just(RustToken::EndDelim(Delimiter::Parenthesis)))
-                        .map(|expr| UnitExpr::Paren(Box::new(expr)))
-                );
+            let atom = UnitName::parser().map(UnitExpr::Unit).or(expr
+                .delimited_by(
+                    just(RustToken::StartDelim(Delimiter::Parenthesis)),
+                    just(RustToken::EndDelim(Delimiter::Parenthesis)),
+                )
+                .map(|expr| UnitExpr::Paren(Box::new(expr))));
 
-            let pow = atom.then(punct('^').ignore_then(
-                punct('-')
-                    .or_not()
-                    .then(
-                        filter_map(|span, tok: RustToken| tok.into_literal()
-                            .and_then(|lit: Literal| if let Ok(num) = u8::from_str(&lit.to_string()) {
-                                Ok(num)
-                            } else {
-                                Err(RustToken::Literal(lit))
-                            })
-                            .map_err(|tok| Simple::expected_input_found(span, [], Some(tok)))
+            let pow = atom
+                .then(
+                    punct('^')
+                        .ignore_then(
+                            punct('-')
+                                .or_not()
+                                .then(filter_map(|span, tok: RustToken| {
+                                    tok.into_literal()
+                                        .and_then(|lit: Literal| {
+                                            if let Ok(num) = u8::from_str(&lit.to_string()) {
+                                                Ok(num)
+                                            } else {
+                                                Err(RustToken::Literal(lit))
+                                            }
+                                        })
+                                        .map_err(|tok| {
+                                            Simple::expected_input_found(span, [], Some(tok))
+                                        })
+                                }))
+                                .map(|(neg, val)| {
+                                    if neg.is_some() {
+                                        -(val as i8)
+                                    } else {
+                                        val as i8
+                                    }
+                                }),
                         )
-                    )
-                    .map(|(neg, val)| if neg.is_some() {
-                        -(val as i8)
-                    } else {
-                        val as i8
-                    })
-            ).or_not())
+                        .or_not(),
+                )
                 .map(|(expr, pow)| match pow {
                     Some(pow) => UnitExpr::Pow(Box::new(expr), pow),
                     None => expr,
                 });
 
-            let mul = pow.clone().then(pow.repeated())
+            let mul = pow
+                .clone()
+                .then(pow.repeated())
                 .foldl(|left, right| UnitExpr::Mul(Box::new(left), Box::new(right)));
 
-            let div = mul.clone().then(punct('/').ignore_then(mul).repeated())
+            let div = mul
+                .clone()
+                .then(punct('/').ignore_then(mul).repeated())
                 .foldl(|left, right| UnitExpr::Div(Box::new(left), Box::new(right)));
 
             div
@@ -97,15 +131,9 @@ impl UnitExpr {
 
     fn eval(&self) -> UnitResult {
         match self {
-            UnitExpr::Unit(unit) => {
-                unit.eval()
-            }
-            UnitExpr::Paren(inner) => {
-                inner.eval()
-            }
-            UnitExpr::Pow(left, right) => {
-                left.eval().raise_to(*right)
-            }
+            UnitExpr::Unit(unit) => unit.eval(),
+            UnitExpr::Paren(inner) => inner.eval(),
+            UnitExpr::Pow(left, right) => left.eval().raise_to(*right),
             UnitExpr::Mul(left, right) => {
                 let left = left.eval();
                 let right = right.eval();
@@ -227,7 +255,8 @@ pub fn Unit(stream: TokenStream) -> TokenStream {
     match UnitExpr::parser().parse(stream_from_tokens(stream.into())) {
         Ok(expr) => expr.eval().into_token_stream().into(),
         Err(errs) => {
-            let msg = errs.into_iter()
+            let msg = errs
+                .into_iter()
                 .map(|e| format!("{:?}", e))
                 .collect::<String>();
 

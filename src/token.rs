@@ -1,9 +1,13 @@
+//! Implementation of a linear token type - Like [`TokenTree`][proc_macro2::TokenTree] but not
+//! nested
+
 use proc_macro2::{Delimiter, Ident, Literal, Punct, Spacing};
 use std::hash::{Hash, Hasher};
 
-use crate::utils::punct_eq;
+use crate::utils::{lit_eq, punct_eq};
 use crate::RustSpan;
 
+/// Generate common method implementations for a variant
 macro_rules! impl_items {
     ($variant:ident, $inner:ty, $name:literal, $is_name:ident, $as_name:ident, $into_name:ident) => {
         #[inline]
@@ -133,22 +137,18 @@ impl RustToken {
 
     /// Convert this token into a delimiter, start or end, or return `Err(self)`
     pub fn into_delim(self) -> Result<Delimiter, RustToken> {
-        self.into_start_delim()
-            .or_else(RustToken::into_end_delim)
+        self.into_start_delim().or_else(RustToken::into_end_delim)
     }
 }
 
 impl PartialEq for RustToken {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (RustToken::Literal(this), RustToken::Literal(other)) => {
-                // This seems sufficient - literals preserve their text into to_string well
-                this.to_string() == other.to_string()
-            }
+            (RustToken::Literal(this), RustToken::Literal(other)) => lit_eq(this, other),
             (RustToken::Ident(this), RustToken::Ident(other)) => this == other,
             (RustToken::Punct(this), RustToken::Punct(other)) => punct_eq(this, other),
-            (RustToken::StartDelim(this), RustToken::StartDelim(other)) |
-            (RustToken::EndDelim(this), RustToken::EndDelim(other)) => this == other,
+            (RustToken::StartDelim(this), RustToken::StartDelim(other))
+            | (RustToken::EndDelim(this), RustToken::EndDelim(other)) => this == other,
             _ => false,
         }
     }

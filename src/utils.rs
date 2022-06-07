@@ -1,7 +1,10 @@
-use proc_macro2::{Punct, TokenStream, TokenTree};
+//! Utility functions
+
+use proc_macro2::{Literal, Punct, TokenStream, TokenTree};
 
 use super::{RustSpan, RustToken};
 
+/// Convert a `TokenStream` into a flat `Vec`
 pub fn into_vec(stream: TokenStream) -> Vec<(RustToken, RustSpan)> {
     stream
         .into_iter()
@@ -36,6 +39,13 @@ pub fn into_vec(stream: TokenStream) -> Vec<(RustToken, RustSpan)> {
         .collect()
 }
 
+/// Compare two `Literal`s
+pub fn lit_eq(left: &Literal, right: &Literal) -> bool {
+    // This seems sufficient - literals preserve their text into to_string well
+    left.to_string() == right.to_string()
+}
+
+/// Compare two `Punct`s
 pub fn punct_eq(left: &Punct, right: &Punct) -> bool {
     // to_string would lose spacing info
     left.as_char() == right.as_char() && left.spacing() == right.spacing()

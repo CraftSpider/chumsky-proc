@@ -1,3 +1,5 @@
+//! Implementations for standard chumsky traits and types
+
 use chumsky::Stream;
 use proc_macro2::{Span, TokenStream};
 use std::ops::Range;
