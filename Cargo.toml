@@ -16,3 +16,8 @@ quote = "1.0"
 name = "proc-example"
 crate-type = ["proc-macro"]
 proc-macro = true
+
+[[example]]
+name = "unit"
+crate-type = ["proc-macro"]
+proc-macro = true

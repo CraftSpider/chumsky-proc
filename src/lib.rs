@@ -31,3 +31,9 @@ pub(crate) mod utils;
 pub use regular::*;
 pub use span::RustSpan;
 pub use token::RustToken;
+
+/// Common imports, meant to be used as `use chumsky_proc::prelude::*;`
+pub mod prelude {
+    pub use crate::{RustToken, RustSpan, stream_from_tokens};
+    pub use crate::primitive::*;
+}
