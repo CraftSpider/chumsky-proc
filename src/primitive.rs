@@ -12,10 +12,8 @@ use crate::{RustSpan, RustToken};
 /// # Examples
 ///
 /// ```
-/// # use chumsky_proc::primitive::keyword;
-/// # use chumsky_proc::{stream_from_tokens, RustToken, RustSpan};
-/// # use chumsky::Parser;
-/// # use chumsky::primitive::filter_map;
+/// # use chumsky_proc::prelude::*;
+/// # use chumsky::prelude::*;
 /// # use chumsky::error::Cheap;
 /// # use quote::quote;
 /// let parser = keyword::<Cheap<_, RustSpan>>("struct")
@@ -27,6 +25,7 @@ use crate::{RustSpan, RustToken};
 /// parser.parse(stream_from_tokens(quote!(enum Foo)))
 ///     .unwrap_err();
 /// ```
+#[must_use]
 pub fn keyword<'a, E: 'a + Error<RustToken, Span = RustSpan>>(
     keyword: &'a str,
 ) -> impl Parser<RustToken, (), Error = E> + Clone + 'a {
@@ -57,10 +56,8 @@ pub fn keyword<'a, E: 'a + Error<RustToken, Span = RustSpan>>(
 /// # Examples
 ///
 /// ```
-/// # use chumsky_proc::primitive::punct;
-/// # use chumsky_proc::{stream_from_tokens, RustToken, RustSpan};
-/// # use chumsky::Parser;
-/// # use chumsky::primitive::filter_map;
+/// # use chumsky_proc::prelude::*;
+/// # use chumsky::prelude::*;
 /// # use chumsky::error::Cheap;
 /// # use quote::quote;
 /// let parser = filter_map::<_, _, _, Cheap<_, RustSpan>>(RustToken::filter_ident)
@@ -73,6 +70,7 @@ pub fn keyword<'a, E: 'a + Error<RustToken, Span = RustSpan>>(
 /// parser.parse(stream_from_tokens(quote!(a - b)))
 ///     .unwrap_err();
 /// ```
+#[must_use]
 pub fn punct<E: Error<RustToken, Span = RustSpan>>(
     c: char,
 ) -> impl Parser<RustToken, (), Error = E> + Clone {
@@ -105,9 +103,8 @@ pub fn punct<E: Error<RustToken, Span = RustSpan>>(
 /// # Examples
 ///
 /// ```
-/// # use chumsky_proc::primitive::joined_punct;
-/// # use chumsky_proc::{stream_from_tokens, RustSpan};
-/// # use chumsky::Parser;
+/// # use chumsky_proc::prelude::*;
+/// # use chumsky::prelude::*;
 /// # use chumsky::error::Cheap;
 /// # use quote::quote;
 /// let parser = joined_punct::<Cheap<_, RustSpan>>("+=");
@@ -118,15 +115,13 @@ pub fn punct<E: Error<RustToken, Span = RustSpan>>(
 ///
 /// parser.parse(stream_from_tokens(quote!(+ =))).unwrap_err();
 /// ```
-///
+#[must_use]
 pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(
     punct: &str,
 ) -> impl Parser<RustToken, Vec<Punct>, Error = E> + Clone {
     use chumsky::prelude::*;
 
-    if punct.is_empty() {
-        panic!("Invalid punctuation for Rust proc-macro");
-    }
+    assert!(!punct.is_empty(), "Invalid empty punctuation for Rust proc-macro");
 
     let mut puncts = punct
         .chars()
@@ -150,7 +145,7 @@ pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(
                                 Err(RustToken::Punct(punct))
                             }
                         })
-                        .map_err(|tok| E::expected_input_found(span.clone(), [], Some(tok)))
+                        .map_err(|tok| E::expected_input_found(span, [], Some(tok)))
                 })
                 .collect::<Result<_, _>>()
         })

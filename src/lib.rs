@@ -18,7 +18,12 @@
     clippy::doc_markdown,
     clippy::ptr_as_ptr,
     clippy::cloned_instead_of_copied,
-    clippy::unreadable_literal
+    clippy::unreadable_literal,
+    clippy::map_unwrap_or,
+    clippy::match_same_arms,
+    clippy::redundant_closure,
+    clippy::redundant_closure_call,
+    clippy::redundant_closure_for_method_calls,
 )]
 
 pub mod primitive;

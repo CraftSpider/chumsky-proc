@@ -19,15 +19,16 @@ impl chumsky::Span for RustSpan {
     fn context(&self) -> Self::Context {}
 
     fn start(&self) -> Self::Offset {
-        self.clone()
+        *self
     }
 
     fn end(&self) -> Self::Offset {
-        self.clone()
+        *self
     }
 }
 
 /// Generate a chumsky `Stream` from a Rust `TokenStream`
+#[must_use]
 pub fn stream_from_tokens(
     stream: TokenStream,
 ) -> Stream<'static, RustToken, RustSpan, impl Iterator<Item = (RustToken, RustSpan)>> {

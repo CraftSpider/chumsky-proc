@@ -3,11 +3,11 @@ use std::borrow::Borrow;
 use std::ops::Deref;
 
 /// A wrapper around a Rust `Span`
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct RustSpan(Span);
 
 impl RustSpan {
-    pub(crate) fn join(&self, other: RustSpan) -> Option<RustSpan> {
+    pub(crate) fn join(self, other: RustSpan) -> Option<RustSpan> {
         self.0.join(other.0).map(RustSpan::from)
     }
 }
@@ -15,6 +15,12 @@ impl RustSpan {
 impl From<Span> for RustSpan {
     fn from(span: Span) -> Self {
         RustSpan(span)
+    }
+}
+
+impl From<RustSpan> for Span {
+    fn from(span: RustSpan) -> Self {
+        span.0
     }
 }
 

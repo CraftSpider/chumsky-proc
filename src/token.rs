@@ -7,14 +7,16 @@ use crate::RustSpan;
 macro_rules! impl_items {
     ($variant:ident, $inner:ty, $name:literal, $is_name:ident, $as_name:ident, $into_name:ident) => {
         #[inline]
+        #[must_use]
         #[doc = concat!("Returns whether this token is ", $name)]
-        pub fn $is_name(&self) -> bool {
+        pub const fn $is_name(&self) -> bool {
             matches!(self, RustToken::$variant(_))
         }
 
         #[inline]
+        #[must_use]
         #[doc = concat!("Get this token as ", $name, ", or return `None`")]
-        pub fn $as_name(&self) -> Option<&$inner> {
+        pub const fn $as_name(&self) -> Option<&$inner> {
             if let Self::$variant(inner) = self {
                 Some(inner)
             } else {
@@ -118,11 +120,13 @@ impl RustToken {
     );
 
     /// Returns whether this token is a delimiter - start or end
-    pub fn is_delim(&self) -> bool {
+    #[must_use]
+    pub const fn is_delim(&self) -> bool {
         self.is_start_delim() || self.is_end_delim()
     }
 
     /// Get this token as a delimiter, start or end, or return `None`
+    #[must_use]
     pub fn as_delim(&self) -> Option<&Delimiter> {
         self.as_start_delim().or_else(|| self.as_end_delim())
     }
@@ -130,7 +134,7 @@ impl RustToken {
     /// Convert this token into a delimiter, start or end, or return `Err(self)`
     pub fn into_delim(self) -> Result<Delimiter, RustToken> {
         self.into_start_delim()
-            .or_else(|this| this.into_end_delim())
+            .or_else(RustToken::into_end_delim)
     }
 }
 
@@ -143,7 +147,7 @@ impl PartialEq for RustToken {
             }
             (RustToken::Ident(this), RustToken::Ident(other)) => this == other,
             (RustToken::Punct(this), RustToken::Punct(other)) => punct_eq(this, other),
-            (RustToken::StartDelim(this), RustToken::StartDelim(other)) => this == other,
+            (RustToken::StartDelim(this), RustToken::StartDelim(other)) |
             (RustToken::EndDelim(this), RustToken::EndDelim(other)) => this == other,
             _ => false,
         }
@@ -153,22 +157,20 @@ impl PartialEq for RustToken {
 impl PartialEq<Literal> for RustToken {
     fn eq(&self, other: &Literal) -> bool {
         self.as_literal()
-            .map(|lit| lit.to_string() == other.to_string())
-            .unwrap_or(false)
+            .map_or(false, |lit| lit.to_string() == other.to_string())
     }
 }
 
 impl PartialEq<Ident> for RustToken {
     fn eq(&self, other: &Ident) -> bool {
-        self.as_ident().map(|ident| ident == other).unwrap_or(false)
+        self.as_ident().map_or(false, |ident| ident == other)
     }
 }
 
 impl PartialEq<Punct> for RustToken {
     fn eq(&self, other: &Punct) -> bool {
         self.as_punct()
-            .map(|punct| punct_eq(punct, other))
-            .unwrap_or(false)
+            .map_or(false, |punct| punct_eq(punct, other))
     }
 }
 
