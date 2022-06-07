@@ -21,13 +21,13 @@
     clippy::unreadable_literal
 )]
 
+pub mod primitive;
+mod regular;
 mod span;
 mod token;
-mod regular;
 pub(crate) mod utils;
-pub mod primitive;
 // TODO: zero-copy, once it's released
 
+pub use regular::*;
 pub use span::RustSpan;
 pub use token::RustToken;
-pub use regular::*;

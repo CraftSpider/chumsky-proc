@@ -1,7 +1,6 @@
-
 use proc_macro2::Span;
-use std::ops::Deref;
 use std::borrow::Borrow;
+use std::ops::Deref;
 
 /// A wrapper around a Rust `Span`
 #[derive(Clone, Debug)]

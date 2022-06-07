@@ -1,7 +1,6 @@
-
-use std::ops::Range;
-use proc_macro2::{Span, TokenStream};
 use chumsky::Stream;
+use proc_macro2::{Span, TokenStream};
+use std::ops::Range;
 
 use super::{RustSpan, RustToken};
 use crate::utils::into_vec;
@@ -11,7 +10,10 @@ impl chumsky::Span for RustSpan {
     type Offset = RustSpan;
 
     fn new(_: Self::Context, range: Range<Self::Offset>) -> Self {
-        range.start.join(range.end).unwrap_or_else(|| Span::mixed_site().into())
+        range
+            .start
+            .join(range.end)
+            .unwrap_or_else(|| Span::mixed_site().into())
     }
 
     fn context(&self) -> Self::Context {}
@@ -26,11 +28,10 @@ impl chumsky::Span for RustSpan {
 }
 
 /// Generate a chumsky `Stream` from a Rust `TokenStream`
-pub fn stream_from_tokens(stream: TokenStream) -> Stream<'static, RustToken, RustSpan, impl Iterator<Item = (RustToken, RustSpan)>> {
+pub fn stream_from_tokens(
+    stream: TokenStream,
+) -> Stream<'static, RustToken, RustSpan, impl Iterator<Item = (RustToken, RustSpan)>> {
     let tokens = into_vec(stream);
 
-    Stream::from_iter(
-        Span::mixed_site().into(),
-        tokens.into_iter(),
-    )
+    Stream::from_iter(Span::mixed_site().into(), tokens.into_iter())
 }

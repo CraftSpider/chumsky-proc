@@ -1,7 +1,6 @@
-
-use proc_macro::TokenStream;
-use chumsky_proc::{RustToken, RustSpan, stream_from_tokens};
 use chumsky::prelude::*;
+use chumsky_proc::{stream_from_tokens, RustSpan, RustToken};
+use proc_macro::TokenStream;
 use proc_macro2::{Ident, Punct};
 
 #[derive(Debug)]
@@ -15,15 +14,16 @@ fn parser() -> impl Parser<RustToken, SimpleExpr, Error = Simple<RustToken, Rust
     filter_map(RustToken::filter_ident)
         .then(filter_map(RustToken::filter_punct))
         .then(filter_map(RustToken::filter_ident))
-        .map(|((left, middle), right)| SimpleExpr { left, middle, right })
+        .map(|((left, middle), right)| SimpleExpr {
+            left,
+            middle,
+            right,
+        })
 }
 
 #[proc_macro]
 pub fn example(item: TokenStream) -> TokenStream {
-    println!(
-        "{:?}",
-        parser().parse(stream_from_tokens(item.into())),
-    );
+    println!("{:?}", parser().parse(stream_from_tokens(item.into())),);
 
     TokenStream::new()
 }
