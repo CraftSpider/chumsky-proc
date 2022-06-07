@@ -26,6 +26,7 @@ use proc_macro2::{TokenTree, TokenStream};
 mod span;
 mod token;
 mod regular;
+pub mod primitive;
 // TODO: zero-copy, once it's released
 
 pub use span::RustSpan;

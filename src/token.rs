@@ -22,36 +22,6 @@ pub enum RustToken {
 }
 
 impl RustToken {
-    /// Returns whether this token is a Literal
-    pub fn is_literal(&self) -> bool {
-        matches!(self, RustToken::Literal(_))
-    }
-
-    /// Returns whether this token is an identifier
-    pub fn is_ident(&self) -> bool {
-        matches!(self, RustToken::Ident(_))
-    }
-
-    /// Returns whether this token is punctuation
-    pub fn is_punct(&self) -> bool {
-        matches!(self, RustToken::Punct(_))
-    }
-
-    /// Returns whether this token is a delimiter - start or end
-    pub fn is_delim(&self) -> bool {
-        self.is_start_delim() || self.is_end_delim()
-    }
-
-    /// Returns whether this token is a starting delimiter
-    pub fn is_start_delim(&self) -> bool {
-        matches!(self, RustToken::StartDelim(_))
-    }
-
-    /// Returns whether this token is an ending delimiter
-    pub fn is_end_delim(&self) -> bool {
-        matches!(self, RustToken::EndDelim(_))
-    }
-
     /// A utility for passing to `filter_map` which converts tokens to a `Literal` or returns an
     /// error
     pub fn filter_literal<E: chumsky::Error<RustToken, Span = RustSpan>>(span: RustSpan, this: Self) -> Result<Literal, E> {
@@ -81,6 +51,36 @@ impl RustToken {
             Err(E::expected_input_found(span, [], Some(this)))
         }
     }
+
+    /// Returns whether this token is a Literal
+    pub fn is_literal(&self) -> bool {
+        matches!(self, RustToken::Literal(_))
+    }
+
+    /// Returns whether this token is an identifier
+    pub fn is_ident(&self) -> bool {
+        matches!(self, RustToken::Ident(_))
+    }
+
+    /// Returns whether this token is punctuation
+    pub fn is_punct(&self) -> bool {
+        matches!(self, RustToken::Punct(_))
+    }
+
+    /// Returns whether this token is a delimiter - start or end
+    pub fn is_delim(&self) -> bool {
+        self.is_start_delim() || self.is_end_delim()
+    }
+
+    /// Returns whether this token is a starting delimiter
+    pub fn is_start_delim(&self) -> bool {
+        matches!(self, RustToken::StartDelim(_))
+    }
+
+    /// Returns whether this token is an ending delimiter
+    pub fn is_end_delim(&self) -> bool {
+        matches!(self, RustToken::EndDelim(_))
+    }
 }
 
 impl PartialEq for RustToken {
@@ -104,6 +104,36 @@ impl PartialEq for RustToken {
                 this == other
             }
             _ => false,
+        }
+    }
+}
+
+impl PartialEq<Literal> for RustToken {
+    fn eq(&self, other: &Literal) -> bool {
+        if let RustToken::Literal(lit) = self {
+            lit.to_string() == other.to_string()
+        } else {
+            false
+        }
+    }
+}
+
+impl PartialEq<Ident> for RustToken {
+    fn eq(&self, other: &Ident) -> bool {
+        if let RustToken::Ident(ident) = self {
+            ident == other
+        } else {
+            false
+        }
+    }
+}
+
+impl PartialEq<Punct> for RustToken {
+    fn eq(&self, other: &Punct) -> bool {
+        if let RustToken::Punct(punct) = self {
+            punct.as_char() == other.as_char() && punct.spacing() == other.spacing()
+        } else {
+            false
         }
     }
 }
