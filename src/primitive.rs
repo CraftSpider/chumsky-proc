@@ -1,11 +1,11 @@
 //! Primitive parsers for common proc-macro parsing operations
 
-use chumsky::error::Error;
-use chumsky::prelude::*;
+use chumsky::zero_copy::error::Error;
+use chumsky::zero_copy::prelude::*;
 use proc_macro2::{Ident, Punct, Spacing, Span};
 
 use crate::utils::punct_eq;
-use crate::{RustSpan, RustToken};
+use crate::{RustToken, RustTokens};
 
 /// Accepts only an exact identifier, output `()` on success
 ///
@@ -26,10 +26,14 @@ use crate::{RustSpan, RustToken};
 ///     .unwrap_err();
 /// ```
 #[must_use]
-pub fn keyword<'a, E: 'a + Error<RustToken, Span = RustSpan>>(
+pub fn keyword<'a, E, S>(
     keyword: &'a str,
-) -> impl Parser<RustToken, (), Error = E> + Clone + 'a {
-    filter_map(move |span, tok: RustToken| {
+) -> impl Parser<'a, RustTokens, (), E, S> + Clone + 'a
+where
+    E: 'a + Error<RustTokens>,
+    S: 'a,
+{
+    any::<RustTokens, _, _>().try_map(move |tok, span| {
         tok.into_ident()
             .and_then(|ident| {
                 if ident == keyword {
@@ -39,13 +43,13 @@ pub fn keyword<'a, E: 'a + Error<RustToken, Span = RustSpan>>(
                 }
             })
             .map_err(|tok| {
-                E::expected_input_found(
-                    span,
+                E::expected_found(
                     [Some(RustToken::Ident(Ident::new(
                         keyword,
                         Span::mixed_site(),
                     )))],
                     Some(tok),
+                    span,
                 )
             })
     })
@@ -71,10 +75,14 @@ pub fn keyword<'a, E: 'a + Error<RustToken, Span = RustSpan>>(
 ///     .unwrap_err();
 /// ```
 #[must_use]
-pub fn punct<E: Error<RustToken, Span = RustSpan>>(
+pub fn punct<'a, E, S>(
     c: char,
-) -> impl Parser<RustToken, (), Error = E> + Clone {
-    filter_map(move |span, tok: RustToken| {
+) -> impl Parser<'a, RustTokens, (), E, S> + Clone
+where
+    E: Error<RustTokens>,
+    S: 'a,
+{
+    any::<RustTokens, _, _>().try_map(move |tok, span| {
         tok.into_punct()
             .and_then(|punct| {
                 if punct.as_char() == c {
@@ -84,10 +92,10 @@ pub fn punct<E: Error<RustToken, Span = RustSpan>>(
                 }
             })
             .map_err(|tok| {
-                E::expected_input_found(
-                    span,
+                E::expected_found(
                     [Some(RustToken::Punct(Punct::new(c, Spacing::Alone)))],
                     Some(tok),
+                    span,
                 )
             })
     })
@@ -116,11 +124,13 @@ pub fn punct<E: Error<RustToken, Span = RustSpan>>(
 /// parser.parse(stream_from_tokens(quote!(+ =))).unwrap_err();
 /// ```
 #[must_use]
-pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(
+pub fn joined_punct<'a, E, S>(
     punct: &str,
-) -> impl Parser<RustToken, Vec<Punct>, Error = E> + Clone {
-    use chumsky::prelude::*;
-
+) -> impl Parser<'a, RustTokens, Vec<Punct>, E, S> + Clone
+where
+    E: Error<RustTokens>,
+    S: 'a,
+{
     assert!(
         !punct.is_empty(),
         "Invalid empty punctuation for Rust proc-macro"
@@ -133,26 +143,28 @@ pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(
 
     let last = puncts.pop().unwrap();
 
-    any()
+    any::<RustTokens, _, _>()
         .repeated()
         .exactly(puncts.len())
-        .try_map::<Vec<Punct>, _>(move |toks: Vec<RustToken>, span: RustSpan| {
-            toks.into_iter()
+        .slice()
+        .try_map(move |toks, span| {
+            toks.iter()
                 .enumerate()
                 .map(|(idx, tok)| {
-                    tok.into_punct()
+                    tok.as_punct()
+                        .ok_or_else(|| tok.clone())
                         .and_then(|punct| {
-                            if punct_eq(&punct, &puncts[idx]) {
-                                Ok(punct)
+                            if punct_eq(punct, &puncts[idx]) {
+                                Ok(punct.clone())
                             } else {
-                                Err(RustToken::Punct(punct))
+                                Err(RustToken::Punct(punct.clone()))
                             }
                         })
-                        .map_err(|tok| E::expected_input_found(span, [], Some(tok)))
+                        .map_err(|tok| E::expected_found([], Some(tok), span))
                 })
-                .collect::<Result<_, _>>()
+                .collect::<Result<Vec<_>, _>>()
         })
-        .chain(filter_map(move |span, tok: RustToken| {
+        .chain(any::<RustTokens, _, _>().try_map(move |tok, span| {
             tok.into_punct()
                 .and_then(|punct| {
                     if punct.as_char() == last.as_char() {
@@ -161,6 +173,6 @@ pub fn joined_punct<E: Error<RustToken, Span = RustSpan>>(
                         Err(RustToken::Punct(punct))
                     }
                 })
-                .map_err(|tok| E::expected_input_found(span, [], Some(tok)))
+                .map_err(|tok| E::expected_found([], Some(tok), span))
         }))
 }

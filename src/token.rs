@@ -3,9 +3,10 @@
 
 use proc_macro2::{Delimiter, Ident, Literal, Punct, Spacing};
 use std::hash::{Hash, Hasher};
+use chumsky::zero_copy::error::Error;
 
 use crate::utils::{lit_eq, punct_eq};
-use crate::RustSpan;
+use crate::{RustSpan, RustTokens};
 
 /// Generate common method implementations for a variant
 macro_rules! impl_items {
@@ -61,32 +62,32 @@ pub enum RustToken {
 impl RustToken {
     /// A utility for passing to `filter_map` which converts tokens to a `Literal` or returns an
     /// error
-    pub fn filter_literal<E: chumsky::Error<RustToken, Span = RustSpan>>(
+    pub fn filter_literal<E: Error<RustTokens>>(
+        self,
         span: RustSpan,
-        this: Self,
     ) -> Result<Literal, E> {
-        this.into_literal()
-            .map_err(|this| E::expected_input_found(span, [], Some(this)))
+        self.into_literal()
+            .map_err(|this| E::expected_found([], Some(this), span))
     }
 
     /// A utility for passing to `filter_map` which converts tokens to an `Ident` or returns an
     /// error
-    pub fn filter_ident<E: chumsky::Error<RustToken, Span = RustSpan>>(
+    pub fn filter_ident<E: Error<RustTokens>>(
+        self,
         span: RustSpan,
-        this: Self,
     ) -> Result<Ident, E> {
-        this.into_ident()
-            .map_err(|this| E::expected_input_found(span, [], Some(this)))
+        self.into_ident()
+            .map_err(|this| E::expected_found([], Some(this), span))
     }
 
     /// A utility for passing to `filter_map` which converts tokens to a `Punct` or returns an
     /// error
-    pub fn filter_punct<E: chumsky::Error<RustToken, Span = RustSpan>>(
+    pub fn filter_punct<E: Error<RustTokens>>(
+        self,
         span: RustSpan,
-        this: Self,
     ) -> Result<Punct, E> {
-        this.into_punct()
-            .map_err(|this| E::expected_input_found(span, [], Some(this)))
+        self.into_punct()
+            .map_err(|this| E::expected_found([], Some(this), span))
     }
 
     impl_items!(

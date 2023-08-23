@@ -1,9 +1,10 @@
-use chumsky::prelude::*;
+use chumsky::zero_copy::prelude::*;
 use chumsky_proc::prelude::*;
 use proc_macro::TokenStream;
 use proc_macro2::{Delimiter, Literal};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
+use chumsky_proc::RustTokens;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum UnitName {
@@ -17,7 +18,7 @@ enum UnitName {
 }
 
 impl UnitName {
-    fn parser() -> impl Parser<RustToken, UnitName, Error = Simple<RustToken, RustSpan>> + Clone {
+    fn parser<'a>() -> impl Parser<'a, RustTokens, UnitName, Simple<RustTokens>, ()> + Clone {
         keyword("s")
             .to(UnitName::S)
             .or(keyword("m").to(UnitName::M))
@@ -72,7 +73,7 @@ enum UnitExpr {
 }
 
 impl UnitExpr {
-    fn parser() -> impl Parser<RustToken, UnitExpr, Error = Simple<RustToken, RustSpan>> {
+    fn parser<'a>() -> impl Parser<'a, RustTokens, UnitExpr, Simple<RustTokens>, ()> {
         recursive(|expr| {
             let atom = UnitName::parser().map(UnitExpr::Unit).or(expr
                 .delimited_by(
@@ -87,7 +88,7 @@ impl UnitExpr {
                         .ignore_then(
                             punct('-')
                                 .or_not()
-                                .then(filter_map(|span, tok: RustToken| {
+                                .then(any::<RustTokens, _, _>().try_map(|tok, span| {
                                     tok.into_literal()
                                         .and_then(|lit: Literal| {
                                             if let Ok(num) = u8::from_str(&lit.to_string()) {
@@ -97,7 +98,7 @@ impl UnitExpr {
                                             }
                                         })
                                         .map_err(|tok| {
-                                            Simple::expected_input_found(span, [], Some(tok))
+                                            Simple::expected_found([], Some(tok), span)
                                         })
                                 }))
                                 .map(|(neg, val)| {
@@ -252,7 +253,8 @@ impl ToTokens for UnitResult {
 #[allow(non_snake_case)]
 #[proc_macro]
 pub fn Unit(stream: TokenStream) -> TokenStream {
-    match UnitExpr::parser().parse(stream_from_tokens(stream.into())) {
+    let toks = RustTokens::new(stream.into());
+    match UnitExpr::parser().parse(&toks).into_result() {
         Ok(expr) => expr.eval().into_token_stream().into(),
         Err(errs) => {
             let msg = errs

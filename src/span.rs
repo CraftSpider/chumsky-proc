@@ -1,5 +1,6 @@
 //! Implementation of a wrapper for a Rust `Span` to avoid foreign impl issues
 
+use chumsky::zero_copy::span::Span as ChumskySpan;
 use proc_macro2::Span;
 use std::borrow::Borrow;
 use std::ops::Deref;
@@ -45,4 +46,9 @@ impl Borrow<Span> for RustSpan {
     fn borrow(&self) -> &Span {
         &self.0
     }
+}
+
+impl ChumskySpan for RustSpan {
+    type Context = ();
+    type Offset = RustSpan;
 }

@@ -28,18 +28,18 @@
 )]
 
 pub mod primitive;
-mod regular;
+mod input;
 mod span;
 mod token;
 pub(crate) mod utils;
 // TODO: zero-copy, once it's released
 
-pub use regular::*;
+pub use input::*;
 pub use span::RustSpan;
 pub use token::RustToken;
 
 /// Common imports, meant to be used as `use chumsky_proc::prelude::*;`
 pub mod prelude {
     pub use crate::primitive::*;
-    pub use crate::{stream_from_tokens, RustSpan, RustToken};
+    pub use crate::{RustSpan, RustToken};
 }
